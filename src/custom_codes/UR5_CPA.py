@@ -11,7 +11,7 @@ from publish_joint_states import *
 
 # Moveit Import
 import moveit_commander
-import moveit_python
+# import moveit_python
 from moveit_commander.conversions import pose_to_list
 
 # Msg Import
@@ -36,7 +36,7 @@ from get_geometric_jacobian import *
 from get_ur5_position import *
 from show_HTM import *
 from get_dist3D import *
-import CPA_classico
+# import CPA_classico
 from CPA_classico import *
 
 

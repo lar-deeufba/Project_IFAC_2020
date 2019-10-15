@@ -3,18 +3,20 @@
 # ROS import
 import sys
 import rospy
-from tf.transformations import quaternion_from_euler, quaternion_matrix
 import tf
-from tf import TransformListener, Transformer
+from tf.transformations import quaternion_from_euler #, quaternion_matrix
+from tf import TransformListener, TransformerROS
 import actionlib
 
 # Moveit Import
 import moveit_commander
-from moveit_commander.conversions import pose_to_list
+from moveit_python import *
+# from moveit_commander.conversions import pose_to_list
 
 # Msg Import
 from moveit_msgs.msg import *
-from geometry_msgs.msg import *
+# from geometry_msgs.msg import *
+from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose
 from std_msgs.msg import String, Header, ColorRGBA
 from visualization_msgs.msg import Marker
 from shape_msgs.msg import SolidPrimitive
@@ -113,21 +115,24 @@ class MoveGroupPythonIntefaceTutorial(object):
         super(MoveGroupPythonIntefaceTutorial, self).__init__()
 
         moveit_commander.roscpp_initialize(sys.argv)
-        rospy.init_node(
-            'move_group_python_interface_ur5_robot', anonymous=True)
+        rospy.init_node('move_group_python_interface_ur5_robot', anonymous=True)
 
-        self.display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-                                                            moveit_msgs.msg.DisplayTrajectory,
-                                                            queue_size=20)
+        # self.display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
+        #                                                     moveit_msgs.msg.DisplayTrajectory,
+        #                                                     queue_size=20)
+
+        self.pose = PoseStamped()
+        # publish path or trajectory to publish_trajectory.py
+        self.pose_publisher = rospy.Publisher('pose_publisher_tp', PoseStamped, queue_size=10)
         rospy.sleep(0.5)
 
         # Topico para publicar marcadores para o Rviz
-        self.marker_publisher = rospy.Publisher(
-            'visualization_marker', Marker, queue_size=100)
+        self.marker_publisher = rospy.Publisher('visualization_marker', Marker, queue_size=100)
         rospy.sleep(0.5)
 
-        self.tf = TransformListener()
-        rospy.sleep(0.5)
+        self.tf = tf.TransformListener()
+
+        self.scene = PlanningSceneInterface("base_link")
 
         self.marker = Marker()
         self.joint_states = JointState()
@@ -138,8 +143,7 @@ class MoveGroupPythonIntefaceTutorial(object):
         self.ur5_param = (0.089159, 0.13585, -0.1197, 0.425,
                           0.39225, 0.10915, 0.093, 0.09465, 0.0823 + 0.15)
 
-        self.client = actionlib.SimpleActionClient(
-            'arm_controller/follow_joint_trajectory', FollowJointTrajectoryAction)
+        self.client = actionlib.SimpleActionClient('arm_controller/follow_joint_trajectory', FollowJointTrajectoryAction)
         print "Waiting for server (gazebo)..."
         self.client.wait_for_server()
         print "Connected to server (gazebo)"
@@ -241,6 +245,31 @@ class MoveGroupPythonIntefaceTutorial(object):
         self.id2 += 1
 
     """
+    Add Cylinder pose
+    """
+    def add_obstacles(self, name, height, radius, pose, orientation, r, g, b):
+        scene = self.scene
+        # addCylinder (self, name, height, radius, x, y, z, use_service=True)
+        s = SolidPrimitive()
+        s.dimensions = [height, radius] # [height, radius]
+        s.type = s.CYLINDER
+
+        ps = Pose()
+        # ps.header.frame_id = "cylinder1"
+        ps.position.x = pose[0]
+        ps.position.y = pose[1]
+        ps.position.z = pose[2]
+        x, y, z, w = quaternion_from_euler(orientation[0], orientation[1], orientation[2])
+        ps.orientation.x = x
+        ps.orientation.y = y
+        ps.orientation.z = z
+        ps.orientation.w = w
+        scene.addSolidPrimitive(name, s, ps)
+        scene.setColor(name, r, g, b)
+
+
+
+    """
     Plot robot's path to the RViz environment
     """
 
@@ -293,6 +322,7 @@ class MoveGroupPythonIntefaceTutorial(object):
 def main():
     ur5_robot = MoveGroupPythonIntefaceTutorial()
     way_points = []
+    ur5_robot.scene.clear()
 
     # UR5 Initial position
     raw_input("' =========== Aperte enter para posicionar o UR5 \n")
@@ -301,7 +331,7 @@ def main():
     way_points.append(ur5_robot.joint_states.position)
     ur5_robot.move(way_points, "gazebo")
 
-    raw_input("' =========== Aperte enter para carregar os param. dos CPAs \n")
+    # raw_input("' =========== Aperte enter para carregar os param. dos CPAs \n")
 
     # Obstacle positions
     oc = [-0.9, 0, 0.375]  # Obstacle reference point - 3D printer
@@ -313,6 +343,15 @@ def main():
     diam_obs = [0.18] * len(obs_pos)  # Main obstacle repulsive field
     diam_obs[0] = 0.3
     ur5_robot.add_sphere(obs_pos, diam_obs, ColorRGBA(1.0, 0.0, 0.0, 0.5))
+
+    # add_obstacles(name, height, radius, pose, orientation, r, g, b):
+    ur5_robot.add_obstacles("up", 0.54, 0.09, [-0.76, 0, 0.345], [1.5707, 1.5707, 0], 1, 0, 0)
+    ur5_robot.add_obstacles("bottom", 0.54, 0.09, [-0.76, 0, 0.55], [1.5707, 1.5707, 0], 1, 0, 0)
+    ur5_robot.add_obstacles("right", 0.35, 0.09, [-0.76, 0.185, 0.455], [0, 0, 0], 1, 0, 0)
+    ur5_robot.add_obstacles("left", 0.35, 0.09, [-0.76, -0.185, 0.455], [0, 0, 0], 1, 0, 0)
+
+    # apply obstacle colors to moveit
+    ur5_robot.scene.sendColors()
 
     # Final position
     ptFinal = [[-0.9, 0, 0.45]]
@@ -339,14 +378,16 @@ def main():
     # Get current orientation and position of tool0 link
     q = quaternion_from_matrix(ur5_robot.joint_states.position)
     oriAtual = q[1], q[2], q[3], q[0]
-    ptAtual = get_ur5_position(
-        ur5_robot.ur5_param, ur5_robot.joint_states.position, "tool0")
+    ptAtual = get_ur5_position(ur5_robot.ur5_param, ur5_robot.joint_states.position, "tool0")
 
     hz = get_param("rate", 60)
     r = rospy.Rate(hz)
 
     dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal[0]))
     n = 0
+
+    # Choose to display the path
+    ur5_robot.pose.header.frame_id = "path"
 
     raw_input("' =========== Aperte enter para iniciar o algoritmo dos CPAs")
     while dist_EOF_to_Goal > err and not rospy.is_shutdown() and n < max_iter:
@@ -355,8 +396,7 @@ def main():
             ur5_robot.ur5_param, ur5_robot.joint_states.position)
 
         # Get position and distance from each link to each obstacle
-        CP_pos, CP_dist = ur5_robot.get_repulsive_cp(
-            obs_pos, ur5_robot.joint_states.position, CP_ur5_rep)
+        CP_pos, CP_dist = ur5_robot.get_repulsive_cp(obs_pos, ur5_robot.joint_states.position, CP_ur5_rep)
 
         # Get attractive linear and angular forces and repulsive forces
         joint_att_force_p, joint_att_force_w, joint_rep_force = CPA.get_joint_forces(ptAtual, ptFinal, oriAtual, oriFinal,
@@ -383,8 +423,7 @@ def main():
         oriAtual = q[1], q[2], q[3], q[0]
 
         # Get current position of tool0 link
-        ptAtual = get_ur5_position(
-            ur5_robot.ur5_param, ur5_robot.joint_states.position, "tool0")
+        ptAtual = get_ur5_position(ur5_robot.ur5_param, ur5_robot.joint_states.position, "tool0")
 
         # Angle offset between tool0 and base_link (base?)
         oriAtual += quaternion_from_euler(1.5707, 1.5707, 0)
@@ -392,8 +431,13 @@ def main():
         # Get distance from EOF to goal
         dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
 
-        if n % 10 == 0:
-            ur5_robot.visualize_path_planned(ptAtual)
+        if n % 2 == 0:
+            # ur5_robot.visualize_path_planned(ptAtual)
+            ur5_robot.pose.pose.position.x = ptAtual[0]
+            ur5_robot.pose.pose.position.y = ptAtual[1]
+            ur5_robot.pose.pose.position.z = ptAtual[2]
+            ur5_robot.pose_publisher.publish(ur5_robot.pose)
+            # print("Distance to the goal: " + str(dist_EOF_to_Goal))
             # ur5_robot.add_sphere2(ptAtual, ur5_robot.id2, 0.04, ColorRGBA(0.0, 1.0, 0.0, 0.8)) # plot path as spheres
 
         try:
@@ -406,12 +450,19 @@ def main():
     print("Iterations: " + str(n))
     print("Distance to goal: " + str(dist_EOF_to_Goal))
 
+    # choose the trajectory to display
+    ur5_robot.pose.header.frame_id = "trajectory"
+    ur5_robot.pose_publisher.publish(ur5_robot.pose)
+
     raw_input("' =========== Press enter to send the trajectory to Gazebo \n")
     ur5_robot.move(way_points, "gazebo")
 
-    # UR5 Initial position
-    raw_input("' =========== Aperte enter para posicionar o UR5 na posicao UP\n")
-    ur5_robot.move(([0, -1.5707, 0, -1.5707, 0, 0],), "gazebo")
+    raw_input("' =========== Aperte enter para posicionar o UR5 na posicao inicial\n")
+    ur5_robot.move(([0, -1.5707, 0, -1.5707, 1.5707, 0],), "gazebo")
+
+    # Stop plotting trajectory
+    ur5_robot.pose.header.frame_id = "end"
+    ur5_robot.pose_publisher.publish(ur5_robot.pose)
 
     # Uncomment this if you are working with real UR5
     #raw_input("' =========== Aperte enter para posicionar o UR5 real na posicao UP\n")

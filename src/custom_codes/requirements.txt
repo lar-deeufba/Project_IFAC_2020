@@ -1,0 +1,9 @@
+- Moveit Kinect [https://moveit.ros.org/install/]
+- Robotiq Gripper [https://github.com/crigroup/robotiq]
+- Universal Robot [https://github.com/ros-industrial/universal_robot]
+- Ur_modern_driver [https://github.com/ros-industrial/ur_modern_driver/tree/kinetic-devel]
+
+Install any dependencies you might have missed by using this command in catkin_ws folder
+rosdep install --from-paths src --ignore-src -r -y
+
+

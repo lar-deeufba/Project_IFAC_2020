@@ -20,6 +20,8 @@ Run the node corresponding to the file UR5_CPA_Gazebo.py
 
 ## Changes in universal_robot pkg
 
+### Substitute custom_codes/moveit.rviz in universal_robot/ur5_moveit_config/moveit.rviz
+
 ### If TF lookupTransform is used, it is necessary to create a new frame corresponding to the end effector. To do this, add the following lines to the ur5.urdf.xacro file:
 
 ```html
