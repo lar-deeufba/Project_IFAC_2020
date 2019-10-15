@@ -20,7 +20,7 @@ Run the node corresponding to the file UR5_CPA_Gazebo.py
 
 ## Changes in universal_robot pkg
 
-# If TF lookupTransform is used, it is necessary to create a new frame corresponding to the end effector. To do this, add the following lines to the ur5.urdf.xacro file:
+### If TF lookupTransform is used, it is necessary to create a new frame corresponding to the end effector. To do this, add the following lines to the ur5.urdf.xacro file:
 
 ```html
 <xacro:property name="tool0_offset" value="0.15" />
@@ -33,7 +33,7 @@ Run the node corresponding to the file UR5_CPA_Gazebo.py
 </joint>
 ```
 
-# Add these lines to ur_gazebo/ur5gripper_controllers.yaml
+### Add these lines to ur_gazebo/ur5gripper_controllers.yaml
 
 ```yaml
 gripper:
@@ -49,14 +49,14 @@ gripper:
   action_monitor_rate: 10
 ```
 
-# Add these lines to ur_gazebo/ur5.launch
+### Add these lines to ur_gazebo/ur5.launch
 
 ```html
 <rosparam file="$(find ur_gazebo)/controller/ur5gripper_controllers.yaml" command="load"/>
 <node name="gripper_controller_spawner" pkg="controller_manager" type="spawner" args="gripper --shutdown-timeout 0.5"/>
 ```
 
-# Change ur5_moveit_config/config/controllers.yaml according to the following:
+### Change ur5_moveit_config/config/controllers.yaml according to the following:
 
 ```yaml
 controller_list:
@@ -81,7 +81,7 @@ controller_list:
       - robotiq_85_left_knuckle_joint
 ```
 
-# Change ur5_moveit_config/config/fake_controllers.yaml according to the following:
+### Change ur5_moveit_config/config/fake_controllers.yaml according to the following:
 
 ```yaml
 controller_list:
@@ -102,7 +102,7 @@ initial:
 
 ```
 
-# Change ur5_moveit_config/ur5.srdf according to the following:
+### Change ur5_moveit_config/ur5.srdf according to the following:
 
 create a group called manipulator according to the code:
 
