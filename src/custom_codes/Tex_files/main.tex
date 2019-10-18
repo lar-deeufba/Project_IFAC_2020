@@ -1,0 +1,43 @@
+\documentclass[margin=5mm]{standalone}
+%%%<
+\usepackage{verbatim}
+% Example data
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.8}
+\usepackage{pgfplotstable}
+\usepgfplotslibrary{groupplots}
+\begin{document}
+\begin{tikzpicture}
+  % Read the file
+  % if needed, define column separators by pgfplotstableread[col sep=...]{}{}
+ \pgfplotstableread{Joint_states.csv}{\Data}
+ \begin{axis}[
+     title={Temperature dependence of CuSO$_4\cdot$5H$_2$O solubility},
+     xlabel={Temperature C},
+     ylabel={Solubility [g per 100 g water]},
+     height = 10cm,
+     width = 10cm,
+     xmin=0, xmax=983,
+     ymin=-3, ymax=3,
+     xtick={100,200,300,400,500,600,700,800,900,1000},
+     ytick={-4,-3,-2,-1, 0, 1, 2, 3, 4},
+     ymajorgrids=true,
+     grid style=dashed,
+    ]
+    \addplot[
+    color=blue,
+    ] table [x = Index, y = Joint1] {\Data};
+    \addlegendentry{Junta 1}
+    \addplot[
+    color=blue,
+    ] table [x = Index, y = Joint2] {\Data};
+    \addlegendentry{Junta 2}
+    \addplot[
+    color=blue,
+    ] table [x = Index, y = Joint3] {\Data};
+    \addlegendentry{Junta 3}
+
+\end{axis}
+\end{tikzpicture}
+\end{document}

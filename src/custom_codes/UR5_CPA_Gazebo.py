@@ -17,7 +17,7 @@ from moveit_python import *
 from moveit_msgs.msg import *
 # from geometry_msgs.msg import *
 from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose
-from std_msgs.msg import String, Header, ColorRGBA
+from std_msgs.msg import String, Header, ColorRGBA, Float64
 from visualization_msgs.msg import Marker
 from shape_msgs.msg import SolidPrimitive
 from sensor_msgs.msg import JointState
@@ -31,6 +31,8 @@ from ur_inverse_kinematics import *
 import numpy as np
 from numpy import array, dot, pi
 from numpy.linalg import det, norm
+import csv
+import argparse
 
 # Customized code
 from get_geometric_jacobian import *
@@ -48,11 +50,25 @@ def get_param(name, value=None):
     else:
         return value
 
+"""
+    PARSE ARGS
+"""
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='AAPF_Orientation')
+    # store_false assumes that variable is already true and is only set to false if is given in command terminal
+    parser.add_argument('--APF', action='store_false', default='true', help='Choose AAPF instead of APF')
+    parser.add_argument('--OC_Off', action='store_false', help='Deactivate Orientation Control')
+    parser.add_argument('--CSV', action='store_true', help='Write topics into a CSV file')
+    parser.add_argument('--plot', action='store_true', help='Plot path to RVIZ through publish_trajectory.py (run this node first)')
+    parser.add_argument('--realUR5', action='store_true', help='Enable real UR5 controlling')
+    args = parser.parse_args()
+    return args
+
 
 """
 This function transforms from matrix to quaternion
 """
-
 
 def quaternion_from_matrix(joint_values, isprecise=False):
 
@@ -111,7 +127,7 @@ def quaternion_from_matrix(joint_values, isprecise=False):
 class MoveGroupPythonIntefaceTutorial(object):
     """MoveGroupPythonIntefaceTutorial"""
 
-    def __init__(self):
+    def __init__(self, args):
         super(MoveGroupPythonIntefaceTutorial, self).__init__()
 
         moveit_commander.roscpp_initialize(sys.argv)
@@ -124,16 +140,12 @@ class MoveGroupPythonIntefaceTutorial(object):
         self.pose = PoseStamped()
         # publish path or trajectory to publish_trajectory.py
         self.pose_publisher = rospy.Publisher('pose_publisher_tp', PoseStamped, queue_size=10)
-        rospy.sleep(0.5)
 
         # Topico para publicar marcadores para o Rviz
         self.marker_publisher = rospy.Publisher('visualization_marker', Marker, queue_size=100)
-        rospy.sleep(0.5)
 
         self.tf = tf.TransformListener()
-
         self.scene = PlanningSceneInterface("base_link")
-
         self.marker = Marker()
         self.joint_states = JointState()
         self.joint_states.name = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint',
@@ -148,12 +160,11 @@ class MoveGroupPythonIntefaceTutorial(object):
         self.client.wait_for_server()
         print "Connected to server (gazebo)"
 
-        # Uncomment this if you are working with real UR5
-
-        # self.clientreal = actionlib.SimpleActionClient('follow_joint_trajectory', FollowJointTrajectoryAction)
-        # print "Waiting for server (real)..."
-        # self.clientreal.wait_for_server()
-        # print "Connected to server (real)"
+        if args.realUR5:
+            self.clientreal = actionlib.SimpleActionClient('follow_joint_trajectory', FollowJointTrajectoryAction)
+            print "Waiting for server (real)..."
+            self.clientreal.wait_for_server()
+            print "Connected to server (real)"
 
         self.n = 1
         self.id = 100
@@ -267,8 +278,6 @@ class MoveGroupPythonIntefaceTutorial(object):
         scene.addSolidPrimitive(name, s, ps)
         scene.setColor(name, r, g, b)
 
-
-
     """
     Plot robot's path to the RViz environment
     """
@@ -319,8 +328,8 @@ class MoveGroupPythonIntefaceTutorial(object):
             raise
 
 
-def main():
-    ur5_robot = MoveGroupPythonIntefaceTutorial()
+def main(arg):
+    ur5_robot = MoveGroupPythonIntefaceTutorial(args)
     way_points = []
     ur5_robot.scene.clear()
 
@@ -345,10 +354,10 @@ def main():
     ur5_robot.add_sphere(obs_pos, diam_obs, ColorRGBA(1.0, 0.0, 0.0, 0.5))
 
     # add_obstacles(name, height, radius, pose, orientation, r, g, b):
-    ur5_robot.add_obstacles("up", 0.54, 0.09, [-0.76, 0, 0.345], [1.5707, 1.5707, 0], 1, 0, 0)
-    ur5_robot.add_obstacles("bottom", 0.54, 0.09, [-0.76, 0, 0.55], [1.5707, 1.5707, 0], 1, 0, 0)
-    ur5_robot.add_obstacles("right", 0.35, 0.09, [-0.76, 0.185, 0.455], [0, 0, 0], 1, 0, 0)
-    ur5_robot.add_obstacles("left", 0.35, 0.09, [-0.76, -0.185, 0.455], [0, 0, 0], 1, 0, 0)
+    # ur5_robot.add_obstacles("up", 0.54, 0.09, [-0.76, 0, 0.345], [1.5707, 1.5707, 0], 1, 0, 0)
+    # ur5_robot.add_obstacles("bottom", 0.54, 0.09, [-0.76, 0, 0.55], [1.5707, 1.5707, 0], 1, 0, 0)
+    # ur5_robot.add_obstacles("right", 0.35, 0.09, [-0.76, 0.185, 0.455], [0, 0, 0], 1, 0, 0)
+    # ur5_robot.add_obstacles("left", 0.35, 0.09, [-0.76, -0.185, 0.455], [0, 0, 0], 1, 0, 0)
 
     # apply obstacle colors to moveit
     ur5_robot.scene.sendColors()
@@ -371,9 +380,9 @@ def main():
     alfa_rot = 0.4  # Learning rate of orientation
     CP_ur5_rep = 0.15  # Repulsive fields on UR5
 
-    # Parameters
-    CPAA_state = True  # If True, it enables CPAA only on end effector
-    Orientation_state = True  # If True, UR5 will keep end effector orientation
+    # Joint positions initialization
+    if arg.CSV:
+        ur5_joint_positions_vec = ur5_robot.joint_states.position
 
     # Get current orientation and position of tool0 link
     q = quaternion_from_matrix(ur5_robot.joint_states.position)
@@ -401,12 +410,12 @@ def main():
         # Get attractive linear and angular forces and repulsive forces
         joint_att_force_p, joint_att_force_w, joint_rep_force = CPA.get_joint_forces(ptAtual, ptFinal, oriAtual, oriFinal,
                                                                                      dist_EOF_to_Goal, Jacobian, ur5_robot.joint_states.position, ur5_robot.ur5_param, zeta,
-                                                                                     eta, rho_0, dist_att, dist_att_config, CP_dist, CP_pos, obs_pos, CPAA_state, CP_ur5_rep)
+                                                                                     eta, rho_0, dist_att, dist_att_config, CP_dist, CP_pos, obs_pos, arg.APF, CP_ur5_rep)
 
         # Joint angles UPDATE - Attractive force
         ur5_robot.joint_states.position = ur5_robot.joint_states.position + \
             alfa * joint_att_force_p[0]
-        if Orientation_state:
+        if arg.OC_Off:
             ur5_robot.joint_states.position = ur5_robot.joint_states.position + \
                 alfa_rot * joint_att_force_w[0]
         way_points.append(ur5_robot.joint_states.position)
@@ -431,15 +440,20 @@ def main():
         # Get distance from EOF to goal
         dist_EOF_to_Goal = np.linalg.norm(ptAtual - np.asarray(ptFinal))
 
-        if n % 2 == 0:
-            # ur5_robot.visualize_path_planned(ptAtual)
-            ur5_robot.pose.pose.position.x = ptAtual[0]
-            ur5_robot.pose.pose.position.y = ptAtual[1]
-            ur5_robot.pose.pose.position.z = ptAtual[2]
-            ur5_robot.pose_publisher.publish(ur5_robot.pose)
-            # print("Distance to the goal: " + str(dist_EOF_to_Goal))
-            # ur5_robot.add_sphere2(ptAtual, ur5_robot.id2, 0.04, ColorRGBA(0.0, 1.0, 0.0, 0.8)) # plot path as spheres
+        # If true, publish topics to transform into csv later on
+        if arg.CSV:
+            # ur5_joint_positions_vec.append(np.concatenate(([n+1], ur5_robot.joint_states.position), 0))
+            ur5_joint_positions_vec = np.vstack((ur5_joint_positions_vec, ur5_robot.joint_states.position))
 
+        # If true, publish topics to publish_trajectory.py in order to see the path in RVIZ
+        if arg.plot:
+            print("aqui")
+            if n % 2 == 0:
+                # ur5_robot.visualize_path_planned(ptAtual)
+                ur5_robot.pose.pose.position.x = ptAtual[0]
+                ur5_robot.pose.pose.position.y = ptAtual[1]
+                ur5_robot.pose.pose.position.z = ptAtual[2]
+                ur5_robot.pose_publisher.publish(ur5_robot.pose)
         try:
             r.sleep()
         except rospy.exceptions.ROSTimeMovedBackwardsException:
@@ -450,9 +464,20 @@ def main():
     print("Iterations: " + str(n))
     print("Distance to goal: " + str(dist_EOF_to_Goal))
 
-    # choose the trajectory to display
-    ur5_robot.pose.header.frame_id = "trajectory"
-    ur5_robot.pose_publisher.publish(ur5_robot.pose)
+    if arg.CSV:
+        with open('/home/caio/3_Projetos_UR5/Project_IFAC_2019/src/custom_codes/csv_files/Joint_states.csv', mode='w') as employee_file:
+            employee_writer = csv.writer(employee_file, delimiter=' ', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            employee_writer.writerow(['Index', 'Joint1', 'Joint2', 'Joint3', 'Joint4', 'Joint5', 'Joint6'])
+            pos = ur5_joint_positions_vec
+            n = 0
+            for position in pos:
+                employee_writer.writerow([n, position[0], position[1], position[2], position[3], position[4], position[5]])
+                n+=1
+
+    if arg.plot:
+        # choose the trajectory to display in RVIZ
+        ur5_robot.pose.header.frame_id = "trajectory"
+        ur5_robot.pose_publisher.publish(ur5_robot.pose)
 
     raw_input("' =========== Press enter to send the trajectory to Gazebo \n")
     ur5_robot.move(way_points, "gazebo")
@@ -460,22 +485,23 @@ def main():
     raw_input("' =========== Aperte enter para posicionar o UR5 na posicao inicial\n")
     ur5_robot.move(([0, -1.5707, 0, -1.5707, 1.5707, 0],), "gazebo")
 
-    # Stop plotting trajectory
-    ur5_robot.pose.header.frame_id = "end"
-    ur5_robot.pose_publisher.publish(ur5_robot.pose)
+    if arg.plot:
+        # Stop plotting trajectory
+        ur5_robot.pose.header.frame_id = "end"
+        ur5_robot.pose_publisher.publish(ur5_robot.pose)
 
-    # Uncomment this if you are working with real UR5
-    #raw_input("' =========== Aperte enter para posicionar o UR5 real na posicao UP\n")
-    #ur5_robot.move(([0, -1.5707, 0, -1.5707, 0, 0],), "real")
+    if args.realUR5:
+        raw_input("' =========== Aperte enter para posicionar o UR5 real na posicao UP\n")
+        ur5_robot.move(([0, -1.5707, 0, -1.5707, 0, 0],), "real")
 
-    # Uncomment this if you are working with real UR5
-    #raw_input("' =========== Aperte enter para enviar a trajetoria para o UR5 !!!REAL!!! \n")
-    #ur5_robot.move(way_points, "real")
+        raw_input("' =========== Aperte enter para enviar a trajetoria para o UR5 !!!REAL!!! \n")
+        ur5_robot.move(way_points, "real")
 
 
 if __name__ == '__main__':
     try:
-        main()
+        arg = parse_args()
+        main(arg)
     except rospy.ROSInterruptException:
         pass
     except KeyboardInterrupt:
