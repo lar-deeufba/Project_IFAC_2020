@@ -4,19 +4,22 @@
 % Example data
 
 \usepackage{pgfplots}
+\usepackage{subfiles}
 \pgfplotsset{compat=1.8}
+\usepgfplotslibrary{external}
+\tikzexternalize
 \usepackage{pgfplotstable}
-\usepgfplotslibrary{groupplots}
+% \usepgfplotslibrary{groupplots}
 \begin{document}
 \begin{tikzpicture}
   % Read the file
   % if needed, define column separators by pgfplotstableread[col sep=...]{}{}
  \pgfplotstableread{Joint_states.csv}{\Data}
  \begin{axis}[
-     title={Temperature dependence of CuSO$_4\cdot$5H$_2$O solubility},
-     xlabel={Temperature C},
-     ylabel={Solubility [g per 100 g water]},
-     height = 10cm,
+     title={Joint Angles (APF)},
+     xlabel={Iteration},
+     ylabel={Angle [rad]},
+     height = 5cm,
      width = 10cm,
      xmin=0, xmax=983,
      ymin=-3, ymax=3,
@@ -24,6 +27,7 @@
      ytick={-4,-3,-2,-1, 0, 1, 2, 3, 4},
      ymajorgrids=true,
      grid style=dashed,
+     legend style={at={(0.5,-0.3)}, anchor=north,legend columns=-1}
     ]
     \addplot[
     color=blue,

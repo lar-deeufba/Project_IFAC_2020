@@ -310,7 +310,7 @@ class MoveGroupPythonIntefaceTutorial(object):
             while not rospy.is_shutdown() and i < len(way_points):
                 g.trajectory.points.append(JointTrajectoryPoint(positions=way_points[i],
                                                                 velocities=[0] * 6,
-                                                                time_from_start=rospy.Duration(0.1 * i + 1)))
+                                                                time_from_start=rospy.Duration(0.4 * i + 1))) #default 0.1
                 i += 1
 
             if target == "gazebo":
@@ -328,7 +328,7 @@ class MoveGroupPythonIntefaceTutorial(object):
             raise
 
 
-def main(arg):
+def main(args):
     ur5_robot = MoveGroupPythonIntefaceTutorial(args)
     way_points = []
     ur5_robot.scene.clear()
@@ -418,7 +418,6 @@ def main(arg):
         if arg.OC_Off:
             ur5_robot.joint_states.position = ur5_robot.joint_states.position + \
                 alfa_rot * joint_att_force_w[0]
-        way_points.append(ur5_robot.joint_states.position)
 
         # Joint angles UPDATE - Repulsive force
         list = np.transpose(joint_rep_force[0]).tolist()
@@ -448,12 +447,14 @@ def main(arg):
         # If true, publish topics to publish_trajectory.py in order to see the path in RVIZ
         if arg.plot:
             print("aqui")
-            if n % 2 == 0:
+            if n % 100 == 0:
                 # ur5_robot.visualize_path_planned(ptAtual)
                 ur5_robot.pose.pose.position.x = ptAtual[0]
                 ur5_robot.pose.pose.position.y = ptAtual[1]
                 ur5_robot.pose.pose.position.z = ptAtual[2]
                 ur5_robot.pose_publisher.publish(ur5_robot.pose)
+                way_points.append(ur5_robot.joint_states.position)
+
         try:
             r.sleep()
         except rospy.exceptions.ROSTimeMovedBackwardsException:

@@ -26,11 +26,9 @@ def pose_publisher_callback(PoseStampedMsg):
     global trajectory, path
 
     if(PoseStampedMsg.header.frame_id == "path"):
-        print("Displaying Path")
         visualize_path_planned(PoseStampedMsg.pose.position, path, 13, ColorRGBA(0.0, 1.0, 0.0, 0.8))
     elif(PoseStampedMsg.header.frame_id == "trajectory"):
         while PoseStampedMsg.header.frame_id == "trajectory":
-            print("Displaying Trajectory")
             try:
                 eof_position, _ = tf_listener.lookupTransform("base_link", "grasping_link", rospy.Time())
                 visualize_path_planned(Point(eof_position[0],eof_position[1], eof_position[2]), trajectory, 14, ColorRGBA(0.0, 0.0, 1.0, 0.8))
@@ -53,24 +51,5 @@ if __name__ == '__main__':
     marker_publisher = rospy.Publisher('visualization_marker_2', Marker, queue_size=100)
 
     tf_listener = tf.TransformListener()
-    
+
     listener()
-    # msg = geometry_msgs.msg.Pose()
-
-    # end_eff_traj = rospy.Publisher('/end_eff_trajectory', Pose, queue_size=1)
-    # rate = rospy.Rate(10.0)
-
-    # while not rospy.is_shutdown():
-    #     try:
-    #         eof_position, _ = listener.lookupTransform("base_link", "tool0", rospy.Time())
-    #         marker = visualize_path_planned(eof_position, marker)
-    #         print(eof_position)
-    #
-    #         marker_publisher.publish(marker)
-    #
-    #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-    #         continue
-    #
-    #     # end_eff_traj.publish(cmd)
-    #
-    #     rate.sleep()

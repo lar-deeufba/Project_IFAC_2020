@@ -1,5 +1,16 @@
-## Usage
+## Project IFAC World Congress 2020
 
+Repository dedicated to the implementation of Adaptive Artificial Potential Fields by Zhang (2017) for the UR5 robotic manipulator using ROS. A new method for controlling UR5 orientation using Artificial Potential Field is proposed. The full project description will be available shortly after acceptance of the publication in IFAC World Congress (2020)
+
+## Author Information
+Authors: Caio Cristiano Barros Viturino, Ubiratan de Melo Pinto Junior, André Gustavo Scolari Conceição and Leizer Schnitman
+
+C. C. B. Viturino, U. M. P. Junior and A. G. S. Conceiçãoo are with the LaR - Robotics Laboratory, Department of Electrical and Computer Engineering, Federal University of Bahia, Salvador, Brazil.
+E-mails: engcaiobarros@gmail.com, eng.ele.ubiratan@gmail.com, andre.gustavo@ufba.br.
+
+L. Schnitman is with Department of Chemical Engineering, Federal University of Bahia, Salvador, Brazil. E-mail: leizer@ufba.br.
+
+## Usage
 ### To use UR5 with RVIZ + gazebo
 
 To bring up the simulated robot in Gazebo, run:
@@ -17,6 +28,15 @@ In order to start RViz with a configuration including the MoveIt! Motion Plannin
 Run the node corresponding to the file UR5_CPA_Gazebo.py
 
 `rosrun custom_codes UR5_CPA_Gazebo.py`
+
+If you want to see the path beeing publish to RVIZ please run publish_trajectory.py and run UR5_CPA_Gazebo with --plot parameter
+
+`rosrun custom_codes publish_trajectory.py`
+`rosrun custom_codes UR5_CPA_Gazebo.py --plot`
+
+## Required packages
+
+See custom_codes/requirements.txt for more info
 
 ## Changes in universal_robot pkg
 
